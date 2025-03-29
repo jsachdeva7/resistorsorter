@@ -5,8 +5,9 @@ import pygame
 import math
 import json
 
-WIDTH, HEIGHT = 750, 750
-CENTER = (WIDTH // 2, HEIGHT // 2)
+WIDTH, HEIGHT = 1250, 750
+SHIFT_DOWN = 17.5
+CENTER = (WIDTH // 3, HEIGHT // 2 + SHIFT_DOWN)
 RADIUS = 200
 SQUARE_SIZE = 25
 NUM_SIDES = 9
@@ -57,7 +58,6 @@ def distance(p1, p2):
     return math.sqrt((p2[0] - p1[0])**2 + (p2[1] - p1[1])**2)
 
 def draw_pie():
-    screen.fill((255, 255, 255))
     global region_hover
 
     nonagon_points = []
@@ -148,8 +148,8 @@ def draw_pie():
         
     # Calculate the position to center the input box on the screen
     input_box_width, input_box_height = input_box.width, input_box.height
-    input_box.x = (WIDTH - input_box_width) // 2
-    input_box.y = (HEIGHT - input_box_height) // 2
+    input_box.x = (WIDTH / 1.5 - input_box_width) // 2
+    input_box.y = (HEIGHT - input_box_height) // 2 + SHIFT_DOWN
 
     # If the user is editing a region, display a text box for input
     if editing_region is not None and active:
@@ -190,13 +190,64 @@ def point_in_polygon(point, polygon):
         p1x, p1y = p2x, p2y
     return inside
 
+def draw_table():
+    # Table dimensions
+    row_height = 40
+    col_widths = [80, 160, 80]  # Column widths for Box Number, Resistance, and Count
+    table_width = sum(col_widths)  # Total width of table
+    table_height = (NUM_SIDES + 1) * row_height  # Total height of table (including header)
+
+    # Define center-based position
+    center_x = (4 * WIDTH) // 5
+    center_y = HEIGHT // 2
+
+    # Adjust table position based on center
+    table_x = center_x - (table_width // 2)
+    table_y = center_y - (table_height // 2)
+
+    # Render table headers
+    headers = ["Box", "Resistance (Ω)", "Count"]
+    for j, header in enumerate(headers):
+        text = font.render(header, True, (0, 0, 0))
+        text_rect = text.get_rect()
+        column_center_x = table_x + sum(col_widths[:j]) + (col_widths[j] // 2)
+        text_rect.center = (column_center_x, table_y + row_height // 2)
+        screen.blit(text, text_rect)
+
+    # Draw table rows
+    for i in range(NUM_SIDES):
+        box_num = str(i + 1)
+        resistance = str(regions.get(str(i), {}).get("resistance", "N/A"))  # Get resistance
+        count = "0"  # Placeholder for number of resistors (modify as needed)
+
+        values = [box_num, resistance, count]
+        for j, value in enumerate(values):
+            text = font.render(value, True, (0, 0, 0))
+            text_rect = text.get_rect()
+            column_center_x = table_x + sum(col_widths[:j]) + (col_widths[j] // 2)
+            row_center_y = table_y + (i + 1) * row_height + (row_height // 2)
+            text_rect.center = (column_center_x, row_center_y)
+            screen.blit(text, text_rect)
+
+        # Draw row separator lines
+        pygame.draw.line(screen, (0, 0, 0), (table_x, table_y + (i + 1) * row_height),
+                         (table_x + table_width, table_y + (i + 1) * row_height), 1)
+
+    # Draw column separator lines
+    x_offset = table_x
+    pygame.draw.line(screen, (0, 0, 0), (x_offset, table_y), (x_offset, table_y + table_height), 1)
+    for width in col_widths:
+        x_offset += width
+        pygame.draw.line(screen, (0, 0, 0), (x_offset, table_y), (x_offset, table_y + table_height), 1)
+
+
 def draw_go_button():
     global go_hover 
 
     button_width = 200
     button_height = 40
-    button_x = (WIDTH - button_width) // 2  # Center horizontally
-    button_y = (HEIGHT - button_height) // 2  # Center vertically
+    button_x = (WIDTH / 1.5 - button_width) // 2  # Center horizontally
+    button_y = (HEIGHT - button_height) // 2 + SHIFT_DOWN  # Center vertically
 
     # Define the button rectangle
     button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
@@ -226,6 +277,7 @@ running = True
 active = False
 
 while running:    
+    screen.fill((255, 255, 255))
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -261,7 +313,20 @@ while running:
                 else:
                     user_input += event.unicode  # Add typed character to the input string
     
+    # Render instruction text
+    instruction_text = font.render("Click on a box to set the resistance values for sorting, and GO when all ready to sort!", True, (0, 0, 0))
+
+    # Calculate the center position
+    text_x = (WIDTH - instruction_text.get_width()) // 2  # Center horizontally
+    text_y = 20  # Position near the top
+
+    # Draw the text on the screen
+    screen.blit(instruction_text, (text_x, text_y))
+    
+
+    
     draw_pie()
+    draw_table()
     if not active:
         draw_go_button()
     
