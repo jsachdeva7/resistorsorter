@@ -144,7 +144,8 @@ def draw_pie():
         center_y = (y1 + y2) / 2 - perp_dy * side_length / 2
 
         # Display the resistance value as text in the center of the square
-        resistance_text = font.render(f"{resistance} Ω", True, (0, 0, 0))  # Black color text
+        formatted_resistance = format_resistance(resistance)  # Get formatted resistance string
+        resistance_text = font.render(formatted_resistance, True, (0, 0, 0))  # Black color text
         screen.blit(resistance_text, (center_x - resistance_text.get_width() // 2, center_y - resistance_text.get_height() // 2))
 
         # Now calculate the opposite position to place the region index number
@@ -180,7 +181,17 @@ def draw_pie():
         region_hover = True
     else:
         region_hover = False
-        
+
+def format_resistance(resistance_value):
+    if resistance_value == -1:
+        return "Unknown"  # Special case for unknown resistance
+    elif resistance_value >= 1_000_000:
+        return f"{resistance_value / 1_000_000} MΩ"
+    elif resistance_value >= 1_000:
+        return f"{resistance_value / 1_000} kΩ"
+    else:
+        return f"{resistance_value} Ω"
+       
 # Helper function to check if a point is inside a polygon
 def point_in_polygon(point, polygon):
     x, y = point
@@ -215,7 +226,7 @@ def draw_table():
     table_y = center_y - (table_height // 2)
 
     # Render table headers
-    headers = ["Box", "Resistance (Ω)", "Count"]
+    headers = ["Box", "Resistance", "Count"]
     for j, header in enumerate(headers):
         text = font.render(header, True, (0, 0, 0))
         text_rect = text.get_rect()
@@ -226,7 +237,7 @@ def draw_table():
     # Draw table rows
     for i in range(NUM_SIDES):
         box_num = str(i + 1)
-        resistance = str(regions.get(str(i), {}).get("resistance", "N/A"))  # Get resistance
+        resistance = format_resistance(regions.get(str(i), {}).get("resistance", "N/A"))  # Get resistance
         count = "0"  # Placeholder for number of resistors (modify as needed)
 
         values = [box_num, resistance, count]
@@ -318,9 +329,17 @@ while running:
             if active:
                 if event.key == pygame.K_RETURN:  # When Enter is pressed, save the value
                     try:
-                        resistance_value = int(user_input)
-                        regions[editing_region]["resistance"] = resistance_value  # Update dictionary for the specific region
-                        slice_values[editing_region] = resistance_value  # Update dictionary
+                        user_input = user_input.strip().lower()  # Normalize input
+                        if user_input.endswith("k"):
+                            resistance_value = float(user_input[:-1]) * 1_000
+                        elif user_input.endswith("m"):
+                            resistance_value = float(user_input[:-1]) * 1_000_000
+                        else:
+                            resistance_value = float(user_input)  # Assume plain ohms
+                            
+                        resistance_value = int(resistance_value)  # Convert to integer
+                        regions[editing_region]["resistance"] = resistance_value
+                        slice_values[editing_region] = resistance_value  
                     except ValueError:
                         pass  # Handle invalid input gracefully
                     active = False  # Deactivate input box
