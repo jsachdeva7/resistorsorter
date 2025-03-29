@@ -26,6 +26,8 @@ editing_region = None
 # Initialize cursor to be a hand (clicker)
 clicker_cursor = pygame.cursors.Cursor(pygame.SYSTEM_CURSOR_HAND)
 
+rotation_angle = 0  # Initial rotation angle (in degrees)
+
 # Try loading slice values from the JSON file
 DATA_FILE = "slice_values.json"
 try:
@@ -60,12 +62,14 @@ def draw_pie():
 
     nonagon_points = []
 
+    # Apply rotation based on the current angle
     for i in range(NUM_SIDES):
-        angle = math.radians(i * ANGLE)  # Calculate angle in radians
+        angle = math.radians(i * ANGLE + rotation_angle)  # Apply rotation to each point
         x = CENTER[0] + RADIUS * math.cos(angle)  # X-coordinate
         y = CENTER[1] + RADIUS * math.sin(angle)  # Y-coordinate
-        nonagon_points.append((x, y))  # Add vertex to the points list
+        nonagon_points.append((x, y))  # Add rotated vertex to the points list
 
+    # Rest of the code remains the same, just using `nonagon_points` for drawing
     side_length = distance(nonagon_points[0], nonagon_points[1])
 
     # Draw the nonagon (connect the vertices)
@@ -100,10 +104,10 @@ def draw_pie():
             (x1 - perp_dx * side_length, y1 - perp_dy * side_length),  # 3rd corner (back to nonagon)
             (x2 - perp_dx * side_length, y2 - perp_dy * side_length),  # 4th corner (back to nonagon)
         ]
-        # Ensure the resistance_value is correctly fetched for each region
+        
+        # Update the regions dictionary with the square points for the region
         resistance_value = slice_values.get(str(i), None)  # Retrieve resistance value for the current region
 
-        # Update the regions dictionary with the square points for the region
         regions[str(i)] = {
             "resistance": resistance_value, 
             "points": square_points,
@@ -208,8 +212,8 @@ def draw_go_button():
     if button_rect.collidepoint(mouse_x, mouse_y):
         go_hover = True
         pygame.draw.rect(screen, (195, 227, 184), button_rect)
-        if pygame.mouse.get_pressed()[0]:  # Left mouse button
-            print("GO!")  # Action when the button is clicked
+        # if pygame.mouse.get_pressed()[0]:  # Left mouse button
+        #     print("GO!")  # Action when the button is clicked
     else:
         go_hover = False
 
@@ -237,6 +241,11 @@ while running:
                     break
             
         elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT:
+                rotation_angle -= 2.5  # Rotate left by 5 degrees
+            elif event.key == pygame.K_RIGHT:
+                rotation_angle += 2.5  # Rotate right by 5 degrees
+                
             if active:
                 if event.key == pygame.K_RETURN:  # When Enter is pressed, save the value
                     try:
