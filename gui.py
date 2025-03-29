@@ -13,18 +13,31 @@ NUM_SIDES = 9
 ANGLE = 360 / NUM_SIDES
 COLORS = [(100, 150, 255)] * NUM_SIDES
 
+input_box = pygame.Rect(300, 300, 200, 40)  # Position and size of the input box
+
 # regions for resistors
 regions = {}
+editing_region = None
+
 
 # Initialize cursor to be a hand (clicker)
 clicker_cursor = pygame.cursors.Cursor(pygame.SYSTEM_CURSOR_HAND)
 
+# Try loading slice values from the JSON file
 DATA_FILE = "slice_values.json"
 try:
     with open(DATA_FILE, "r") as file:
         slice_values = json.load(file)
 except FileNotFoundError:
     slice_values = {str(i): None for i in range(NUM_SIDES)}
+
+# Initialize regions dictionary with resistances from slice_values
+for i in range(NUM_SIDES):
+    resistance_value = slice_values.get(str(i), None)  # Get the resistance value
+    regions[str(i)] = {"resistance": resistance_value, "points": []}
+
+print("Regions at mouse click:", regions)
+
 
 
 # Initialize Pygame
@@ -81,6 +94,11 @@ def draw_pie():
             (x1 - perp_dx * side_length, y1 - perp_dy * side_length),  # 3rd corner (back to nonagon)
             (x2 - perp_dx * side_length, y2 - perp_dy * side_length),  # 4th corner (back to nonagon)
         ]
+        # Ensure the resistance_value is correctly fetched for each region
+        resistance_value = slice_values.get(str(i), None)  # Retrieve resistance value for the current region
+
+        # Update the regions dictionary with the square points for the region
+        regions[str(i)] = {"resistance": resistance_value, "points": square_points}
 
         # Check if the mouse is over this region (square)
         mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -93,11 +111,7 @@ def draw_pie():
             pygame.draw.polygon(screen, (0, 0, 0), square_points, 2)  # Black border for square
 
         # Get resistance for the region
-        resistance = slice_values.get(str(i), None)
-
-        # Store the square region in the dictioniary w/ resistance as the key
-        regions[resistance] = square_points
-
+        resistance = regions.get(str(i), {}).get("resistance", slice_values.get(str(i), None))
 
         # Draw the square
         pygame.draw.polygon(screen, (0, 0, 0), square_points, 2)  # Black border for square
@@ -110,11 +124,17 @@ def draw_pie():
         resistance_text = font.render(f"{resistance} Ω", True, (0, 0, 0))  # Black color text
         screen.blit(resistance_text, (center_x - resistance_text.get_width() // 2, center_y - resistance_text.get_height() // 2))
 
-    # # For testing purposes, let's print the dictionary (show the regions and their corresponding resistance values)
-    # print("Regions with Resistances:")
-    # for resistance, region in regions.items():
-    #     print(f"Resistance: {resistance}, Region: {region}")
+    # If the user is editing a region, display a text box for input
+    if editing_region is not None and active:
+        pygame.draw.rect(screen, (0, 0, 0), input_box, 2)  # Input box border
+        input_text = font.render(user_input, True, (0, 0, 0))  # Render user input
+        screen.blit(input_text, (input_box.x + 5, input_box.y + 5))  # Display the input text
+
     # Change the cursor to a hand (clicker) if hovering over a region
+    if hovered_region is not None:
+        pygame.mouse.set_cursor(clicker_cursor)
+    else:
+        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
 
     if hovered_region is not None:
         pygame.mouse.set_cursor(clicker_cursor)
@@ -141,25 +161,39 @@ def point_in_polygon(point, polygon):
 
 # Main loop
 running = True
-while running:
-    draw_pie()
-    pygame.display.flip()
 
+while running:    
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-
-        # elif event.type == pygame.MOUSEBUTTONDOWN:
-        #     x, y = event.pos
-        #     distance = math.hypot(x - CENTER[0], y - CENTER[1])
-
-        #     if distance <= RADIUS:  # Click inside the circle
-        #         index = get_slice_index(x, y)
-        #         new_value = input(f"Enter value for slice {index}: ")
-                
-        #         if new_value.isdigit():
-        #             slice_values[str(index)] = int(new_value)
-        #             COLORS[index] = (0, 200, 100)  # Change color to green
-        #             with open(DATA_FILE, "w") as f:
-        #                 json.dump(slice_values, f)
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            # If mouse click on region, start editing that region
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            for region_id, region_data in regions.items():
+                square_points = region_data["points"]
+                if point_in_polygon((mouse_x, mouse_y), square_points):
+                    editing_region = region_id
+                    user_input = str(slice_values.get(region_id, ""))  # Retrieve initial resistance value
+                    active = True  # Activate text input
+                    break
+            
+            # Print regions for debugging
+            print("Regions at mouse click:", regions)
+        elif event.type == pygame.KEYDOWN:
+            if active:
+                if event.key == pygame.K_RETURN:  # When Enter is pressed, save the value
+                    try:
+                        resistance_value = float(user_input)
+                        regions[editing_region]["resistance"] = resistance_value  # Update dictionary for the specific region
+                        slice_values[editing_region] = resistance_value  # Update dictionary
+                    except ValueError:
+                        pass  # Handle invalid input gracefully
+                    active = False  # Deactivate input box
+                    user_input = ""  # Clear the input box
+                elif event.key == pygame.K_BACKSPACE:
+                    user_input = user_input[:-1]  # Remove last character
+                else:
+                    user_input += event.unicode  # Add typed character to the input string
+    draw_pie()
+    pygame.display.flip()
 pygame.quit()
