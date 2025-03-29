@@ -15,10 +15,13 @@ COLORS = [(100, 150, 255)] * NUM_SIDES
 
 input_box = pygame.Rect(300, 300, 200, 40)  # Position and size of the input box
 
+# booleans for mouse value
+region_hover = False
+go_hover = False
+
 # regions for resistors
 regions = {}
 editing_region = None
-
 
 # Initialize cursor to be a hand (clicker)
 clicker_cursor = pygame.cursors.Cursor(pygame.SYSTEM_CURSOR_HAND)
@@ -40,21 +43,20 @@ for i in range(NUM_SIDES):
         "points": []
         }
 
-print("Regions at mouse click:", regions)
-
-
 
 # Initialize Pygame
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Resistor Sorter GUI")
 font = pygame.font.Font(None, 30)
+bigger_font = pygame.font.Font(None, 45)
 
 def distance(p1, p2):
     return math.sqrt((p2[0] - p1[0])**2 + (p2[1] - p1[1])**2)
 
 def draw_pie():
     screen.fill((255, 255, 255))
+    global region_hover
 
     nonagon_points = []
 
@@ -137,7 +139,7 @@ def draw_pie():
         opposite_y = center_y + perp_dy * 2 * side_length / 3
 
         # Display the region index number at the opposite side of the nonagon edge
-        index_text = font.render(f"{regions[str(i)]['index']}", True, (0, 0, 0))  # Black color text for index
+        index_text = bigger_font.render(f"{regions[str(i)]['index']}", True, (0, 0, 0))  # Black color text for index
         screen.blit(index_text, (opposite_x - index_text.get_width() // 2, opposite_y - index_text.get_height() // 2))
         
     # Calculate the position to center the input box on the screen
@@ -162,14 +164,9 @@ def draw_pie():
 
     # Change the cursor to a hand (clicker) if hovering over a region
     if hovered_region is not None:
-        pygame.mouse.set_cursor(clicker_cursor)
+        region_hover = True
     else:
-        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-
-    if hovered_region is not None:
-        pygame.mouse.set_cursor(clicker_cursor)
-    else:
-        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+        region_hover = False
         
 # Helper function to check if a point is inside a polygon
 def point_in_polygon(point, polygon):
@@ -189,8 +186,40 @@ def point_in_polygon(point, polygon):
         p1x, p1y = p2x, p2y
     return inside
 
+def draw_go_button():
+    global go_hover 
+
+    button_width = 200
+    button_height = 40
+    button_x = (WIDTH - button_width) // 2  # Center horizontally
+    button_y = (HEIGHT - button_height) // 2  # Center vertically
+
+    # Define the button rectangle
+    button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
+
+    # Draw the button (light gray background)
+    pygame.draw.rect(screen, (221, 255, 209), button_rect)
+
+    # Render the "GO!" text on the button
+    button_text = font.render("GO!", True, (0, 0, 0))  # Black text
+
+    # Check for mouse click on the button
+    mouse_x, mouse_y = pygame.mouse.get_pos()
+    if button_rect.collidepoint(mouse_x, mouse_y):
+        go_hover = True
+        pygame.draw.rect(screen, (195, 227, 184), button_rect)
+        if pygame.mouse.get_pressed()[0]:  # Left mouse button
+            print("GO!")  # Action when the button is clicked
+    else:
+        go_hover = False
+
+    pygame.draw.rect(screen, (0, 0, 0), button_rect, 2)  # Button border (black)
+    screen.blit(button_text, (button_x + (button_width - button_text.get_width()) // 2,
+                                button_y + (button_height - button_text.get_height()) // 2))
+
 # Main loop
 running = True
+active = False
 
 while running:    
     for event in pygame.event.get():
@@ -222,6 +251,15 @@ while running:
                     user_input = user_input[:-1]  # Remove last character
                 else:
                     user_input += event.unicode  # Add typed character to the input string
+    
     draw_pie()
+    if not active:
+        draw_go_button()
+    
+    if go_hover or region_hover:
+        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+    else:
+        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+
     pygame.display.flip()
 pygame.quit()
