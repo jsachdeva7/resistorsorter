@@ -34,7 +34,11 @@ except FileNotFoundError:
 # Initialize regions dictionary with resistances from slice_values
 for i in range(NUM_SIDES):
     resistance_value = slice_values.get(str(i), None)  # Get the resistance value
-    regions[str(i)] = {"resistance": resistance_value, "points": []}
+    regions[str(i)] = {
+        "index": i + 1,
+        "resistance": resistance_value, 
+        "points": []
+        }
 
 print("Regions at mouse click:", regions)
 
@@ -98,7 +102,11 @@ def draw_pie():
         resistance_value = slice_values.get(str(i), None)  # Retrieve resistance value for the current region
 
         # Update the regions dictionary with the square points for the region
-        regions[str(i)] = {"resistance": resistance_value, "points": square_points}
+        regions[str(i)] = {
+            "resistance": resistance_value, 
+            "points": square_points,
+            "index": i + 1
+        }
 
         # Check if the mouse is over this region (square)
         mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -124,11 +132,33 @@ def draw_pie():
         resistance_text = font.render(f"{resistance} Ω", True, (0, 0, 0))  # Black color text
         screen.blit(resistance_text, (center_x - resistance_text.get_width() // 2, center_y - resistance_text.get_height() // 2))
 
+        # Now calculate the opposite position to place the region index number
+        opposite_x = center_x + perp_dx * 2 * side_length / 3  # Move away from the square along the perpendicular
+        opposite_y = center_y + perp_dy * 2 * side_length / 3
+
+        # Display the region index number at the opposite side of the nonagon edge
+        index_text = font.render(f"{regions[str(i)]['index']}", True, (0, 0, 0))  # Black color text for index
+        screen.blit(index_text, (opposite_x - index_text.get_width() // 2, opposite_y - index_text.get_height() // 2))
+        
+    # Calculate the position to center the input box on the screen
+    input_box_width, input_box_height = input_box.width, input_box.height
+    input_box.x = (WIDTH - input_box_width) // 2
+    input_box.y = (HEIGHT - input_box_height) // 2
+
     # If the user is editing a region, display a text box for input
     if editing_region is not None and active:
-        pygame.draw.rect(screen, (0, 0, 0), input_box, 2)  # Input box border
-        input_text = font.render(user_input, True, (0, 0, 0))  # Render user input
-        screen.blit(input_text, (input_box.x + 5, input_box.y + 5))  # Display the input text
+        # Draw the input box border
+        pygame.draw.rect(screen, (0, 0, 0), input_box, 2)
+
+        # Render the user input text
+        input_text = font.render(user_input, True, (0, 0, 0))
+
+        # Calculate the position to center the text inside the input box
+        text_x = input_box.x + (input_box.width - input_text.get_width()) // 2
+        text_y = input_box.y + (input_box.height - input_text.get_height()) // 2
+
+        # Display the centered input text
+        screen.blit(input_text, (text_x, text_y))
 
     # Change the cursor to a hand (clicker) if hovering over a region
     if hovered_region is not None:
@@ -177,13 +207,11 @@ while running:
                     active = True  # Activate text input
                     break
             
-            # Print regions for debugging
-            print("Regions at mouse click:", regions)
         elif event.type == pygame.KEYDOWN:
             if active:
                 if event.key == pygame.K_RETURN:  # When Enter is pressed, save the value
                     try:
-                        resistance_value = float(user_input)
+                        resistance_value = int(user_input)
                         regions[editing_region]["resistance"] = resistance_value  # Update dictionary for the specific region
                         slice_values[editing_region] = resistance_value  # Update dictionary
                     except ValueError:
