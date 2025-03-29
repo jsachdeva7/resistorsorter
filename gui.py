@@ -50,8 +50,8 @@ for i in range(NUM_SIDES):
     }
 
 # Setup serial communication
-SERIAL_PORT = "COM7"  # Change this to the appropriate port 
-BAUD_RATE = 9600  # This should match the Arduino's baud rate
+SERIAL_PORT = "COM8"  
+BAUD_RATE = 9600  
 
 ser = serial.Serial(SERIAL_PORT, BAUD_RATE)
 time.sleep(2)
@@ -266,7 +266,8 @@ def draw_go_button():
     pygame.draw.rect(screen, (221, 255, 209), button_rect)
 
     # Render the "GO!" text on the button
-    button_text = font.render({"GO!" if not go_pressed else "Starting..."}, True, (0, 0, 0))  # Black text
+    button_text_string = "GO!" if not go_pressed else "Starting..."
+    button_text = font.render(button_text_string, True, (0, 0, 0))  # Black text
 
     # Check for mouse click on the button
     mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -275,16 +276,12 @@ def draw_go_button():
         pygame.draw.rect(screen, (195, 227, 184), button_rect)
         if pygame.mouse.get_pressed()[0]:  # Left mouse button
             print("Sending data to Arduino...")
-
             filtered_regions = {
                 key: {k: v for k, v in region.items() if k != "points"}
                 for key, region in regions.items()
             }
 
             json_data = json.dumps(filtered_regions)
-            ser.write(json_data.encode())
-            ser.flush()
-            time.sleep(1)
     else:
         go_hover = False
 
