@@ -13,6 +13,12 @@ NUM_SIDES = 9
 ANGLE = 360 / NUM_SIDES
 COLORS = [(100, 150, 255)] * NUM_SIDES
 
+# regions for resistors
+regions = {}
+
+# Initialize cursor to be a hand (clicker)
+clicker_cursor = pygame.cursors.Cursor(pygame.SYSTEM_CURSOR_HAND)
+
 DATA_FILE = "slice_values.json"
 try:
     with open(DATA_FILE, "r") as file:
@@ -34,6 +40,7 @@ def draw_pie():
     screen.fill((255, 255, 255))
 
     nonagon_points = []
+
     for i in range(NUM_SIDES):
         angle = math.radians(i * ANGLE)  # Calculate angle in radians
         x = CENTER[0] + RADIUS * math.cos(angle)  # X-coordinate
@@ -45,6 +52,8 @@ def draw_pie():
     # Draw the nonagon (connect the vertices)
     pygame.draw.polygon(screen, (255, 255, 255), nonagon_points)  # White color
     pygame.draw.polygon(screen, (0, 0, 0), nonagon_points, 2)  # Black border
+
+    hovered_region = None  # To track which region the mouse is hovering over
 
     # Draw squares extending from each edge of the nonagon
     for i in range(NUM_SIDES):
@@ -72,11 +81,63 @@ def draw_pie():
             (x1 - perp_dx * side_length, y1 - perp_dy * side_length),  # 3rd corner (back to nonagon)
             (x2 - perp_dx * side_length, y2 - perp_dy * side_length),  # 4th corner (back to nonagon)
         ]
-        
+
+        # Check if the mouse is over this region (square)
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        if point_in_polygon((mouse_x, mouse_y), square_points):
+            hovered_region = i  # Track which region is hovered over
+            # Change the color of the square to yellow
+            pygame.draw.polygon(screen, (255, 254, 179), square_points)
+        else:
+            # Draw the square in the normal color
+            pygame.draw.polygon(screen, (0, 0, 0), square_points, 2)  # Black border for square
+
+        # Get resistance for the region
+        resistance = slice_values.get(str(i), None)
+
+        # Store the square region in the dictioniary w/ resistance as the key
+        regions[resistance] = square_points
+
+
         # Draw the square
-        # pygame.draw.polygon(screen, (255, 255, 255), square_points)
         pygame.draw.polygon(screen, (0, 0, 0), square_points, 2)  # Black border for square
+
+        # Get the center of the square to position the text
+        center_x = (x1 + x2) / 2 - perp_dx * side_length / 2
+        center_y = (y1 + y2) / 2 - perp_dy * side_length / 2
+
+        # Display the resistance value as text in the center of the square
+        resistance_text = font.render(f"{resistance} Ω", True, (0, 0, 0))  # Black color text
+        screen.blit(resistance_text, (center_x - resistance_text.get_width() // 2, center_y - resistance_text.get_height() // 2))
+
+    # # For testing purposes, let's print the dictionary (show the regions and their corresponding resistance values)
+    # print("Regions with Resistances:")
+    # for resistance, region in regions.items():
+    #     print(f"Resistance: {resistance}, Region: {region}")
+    # Change the cursor to a hand (clicker) if hovering over a region
+
+    if hovered_region is not None:
+        pygame.mouse.set_cursor(clicker_cursor)
+    else:
+        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
         
+# Helper function to check if a point is inside a polygon
+def point_in_polygon(point, polygon):
+    x, y = point
+    inside = False
+    n = len(polygon)
+    p1x, p1y = polygon[0]
+    for i in range(n + 1):
+        p2x, p2y = polygon[i % n]
+        if y > min(p1y, p2y):
+            if y <= max(p1y, p2y):
+                if x <= max(p1x, p2x):
+                    if p1y != p2y:
+                        xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                    if p1x == p2x or x <= xinters:
+                        inside = not inside
+        p1x, p1y = p2x, p2y
+    return inside
 
 # Main loop
 running = True
