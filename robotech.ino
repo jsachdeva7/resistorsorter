@@ -190,6 +190,8 @@ int mapNumbertoAngle(int boxNumber) {
 
 }
 
+// The following function is modified from:
+
 // Precision auto-ranging Ohmmeter using the Arduino to measure resistances
 // in the range of 0 Ohms to 1 GOhms.
 //
