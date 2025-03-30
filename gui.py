@@ -46,11 +46,12 @@ for i in range(NUM_SIDES):
     regions[str(i)] = {
         "index": i + 1,
         "resistance": resistance_value, 
-        "points": []
+        "points": [],
+        "resistor_count": 0
     }
 
 # Setup serial communication
-SERIAL_PORT = "COM8"  
+SERIAL_PORT = "COM9"  
 BAUD_RATE = 9600  
 
 ser = serial.Serial(SERIAL_PORT, BAUD_RATE)
@@ -116,11 +117,13 @@ def draw_pie():
         
         # Update the regions dictionary with the square points for the region
         resistance_value = slice_values.get(str(i), None)  # Retrieve resistance value for the current region
+        resistor_count = regions.get(str(i), {}).get("resistor_count", 0)
 
         regions[str(i)] = {
             "resistance": resistance_value, 
             "points": square_points,
-            "index": i + 1
+            "index": i + 1,
+            "resistor_count": resistor_count
         }
 
         # Check if the mouse is over this region (square)
@@ -237,7 +240,7 @@ def draw_table():
     for i in range(NUM_SIDES):
         box_num = str(i + 1)
         resistance = format_resistance(regions.get(str(i), {}).get("resistance", "N/A"))  # Get resistance
-        count = "0"  # Placeholder for number of resistors (modify as needed)
+        count = str(regions.get(str(i), {}).get("resistor_count", 0))  # Default to 0 if not found
 
         values = [box_num, resistance, count]
         for j, value in enumerate(values):
@@ -336,9 +339,16 @@ def identify_resistor(start_button: Button):
             # Check if the measured resistor is within the 10% tolerance range of the given resistor value
             if (given_res - err) <= measured_res <= (given_res + err):
                 print(f"Resistor bucket: {region_data["index"]}")
+
+                # Increment the resistor_count for the matched region
+                region_data["resistor_count"] += 1
                 return region_data["index"]  # If a match is found, return the region's index
-            else:
-                print(f"Resistor bucket: Trash")
+        
+        print(f"Resistor bucket: Trash")
+        for region_key, region_data in regions.items():
+            if region_data["resistance"] == -1:  # Check if resistance is -1 for trash bucket
+                region_data["resistor_count"] += 1  # Increment the trash region count
+                break  # Exit after incrementing the first trash bucket count
 
 # Main loop
 running = True
