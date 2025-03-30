@@ -302,6 +302,10 @@ class Button:
         button_text = self.font.render(self.text if not self.pressed else self.clicked_text, True, (0, 0, 0))
         screen.blit(button_text, (self.x + (self.width - button_text.get_width()) // 2,
                                   self.y + (self.height - button_text.get_height()) // 2))
+        
+    def reset(self):
+        self.hover = False
+        self.pressed = False
 
     def handle_click(self):
         print("clicked")
@@ -383,6 +387,22 @@ while running:
                     user_input = str(slice_values.get(region_id, ""))  # Retrieve initial resistance value
                     active = True  # Activate text input
                     break
+            
+            # Handle "Stop" button click
+            if stop_button.rect.collidepoint(mouse_x, mouse_y):
+                # Reset all button states
+                stop_button.reset()
+                start_button.reset()
+                region_hover = False
+
+                # Reset editing region and active state
+                editing_region = None
+                active = False
+                user_input = ""  # Clear the input box
+
+                # # Reset all regions if necessary (for example, clear resistances or counts)
+                # for region in regions.values():
+                #     region["resistor_count"] = 0  # Reset counts or other variables as needed
             
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
