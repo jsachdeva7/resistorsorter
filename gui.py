@@ -358,12 +358,12 @@ def identify_resistor(start_button: Button):
 running = True
 active = False
 # Create an instance of the Button class
-confirm_button = Button(x=(WIDTH / 1.5 - 200) // 2, y=(HEIGHT - 40) // 2 + SHIFT_DOWN,
-                    width=200, height=40, text="Confirm", font=font, 
-                    hover_color=(141, 204, 202), pressed_color=(176, 255, 252), clicked_text="Confirmed",
-                    message="Resistor buckets confirmed.")
+# confirm_button = Button(x=(WIDTH / 1.5 - 200) // 2, y=(HEIGHT - 40) // 2 + SHIFT_DOWN,
+#                     width=200, height=40, text="Confirm", font=font, 
+#                     hover_color=(141, 204, 202), pressed_color=(176, 255, 252), clicked_text="Confirmed",
+#                     message="Resistor buckets confirmed.")
 
-start_button = Button(x=(4.0 / 5 * WIDTH - 320 / 2), y=582, width=320, height=40, text="Start", 
+start_button = Button(x=(4.0 / 5 * WIDTH - 320 / 2), y=560, width=320, height=40, text="Start", 
                       font=font, hover_color=(195, 227, 184), pressed_color=(221, 255, 209),
                       message="START")
 
@@ -371,6 +371,11 @@ stop_button = Button(x=(4.0 / 5 * WIDTH - 320 / 2), y=start_button.y + start_but
                      , width=320, height=40, text="Stop", 
                       font=font, hover_color=(199, 111, 111), pressed_color=(245, 137, 137),
                       message="STOP")
+reset_button = Button(x=(4.0 / 5 * WIDTH - 320 / 2),  y=stop_button.y + stop_button.height + 20, width=320, height=40, 
+                      text="Reset", font=font, hover_color=(204, 165, 92), 
+                      pressed_color=(255, 206, 115)
+                    )  
+
 
 while running:    
     screen.fill((255, 255, 255))
@@ -393,16 +398,16 @@ while running:
                 # Reset all button states
                 stop_button.reset()
                 start_button.reset()
+                reset_button.reset()
                 region_hover = False
 
                 # Reset editing region and active state
                 editing_region = None
                 active = False
                 user_input = ""  # Clear the input box
-
-                # # Reset all regions if necessary (for example, clear resistances or counts)
-                # for region in regions.values():
-                #     region["resistor_count"] = 0  # Reset counts or other variables as needed
+            if reset_button.rect.collidepoint(mouse_x, mouse_y):
+                for region in regions.values():
+                    region["resistor_count"] = 0  # Reset counts or other variables as needed
             
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
@@ -434,7 +439,7 @@ while running:
                     user_input += event.unicode  # Add typed character to the input string
     
     # Render instruction text
-    instruction_text = font.render("Click on a box to set the resistance values for sorting, and confirm when all ready to sort!", True, (0, 0, 0))
+    instruction_text = font.render("Click on a box to set the resistance values for sorting, and start when all ready to sort!", True, (0, 0, 0))
 
     # Calculate the center position
     text_x = (WIDTH - instruction_text.get_width()) // 2  # Center horizontally
@@ -458,13 +463,13 @@ while running:
 
     start_button.draw(screen, regions)
     stop_button.draw(screen, regions)
+    reset_button.draw(screen, regions)
 
     identify_resistor(start_button)
 
-    if not active:
-        confirm_button.draw(screen, regions)
     
-    if confirm_button.hover or stop_button.hover or start_button.hover or region_hover:
+    
+    if stop_button.hover or start_button.hover or region_hover:
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
     else:
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
