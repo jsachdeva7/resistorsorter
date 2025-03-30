@@ -301,12 +301,10 @@ class Button:
                                   self.y + (self.height - button_text.get_height()) // 2))
 
     def handle_click(self):
-        print("Sending data to Arduino...")
-        print(f"Sending message: {self.message}")
-
         if ser:
             ser.write((self.message + "\n").encode())  # Send data
-            print("Message sent!")
+            response = ser.readline().decode().strip()
+            print(response)
         else:
             print("Serial connection not available.")
 
@@ -319,14 +317,17 @@ active = False
 # Create an instance of the Button class
 confirm_button = Button(x=(WIDTH / 1.5 - 200) // 2, y=(HEIGHT - 40) // 2 + SHIFT_DOWN,
                     width=200, height=40, text="Confirm", font=font, 
-                    hover_color=(141, 204, 202), pressed_color=(176, 255, 252), clicked_text="Confirmed")
+                    hover_color=(141, 204, 202), pressed_color=(176, 255, 252), clicked_text="Confirmed",
+                    message="Resistor buckets confirmed.")
 
 start_button = Button(x=(4.0 / 5 * WIDTH - 320 / 2), y=582, width=320, height=40, text="Start", 
-                      font=font, hover_color=(195, 227, 184), pressed_color=(221, 255, 209))
+                      font=font, hover_color=(195, 227, 184), pressed_color=(221, 255, 209),
+                      message="START")
 
 stop_button = Button(x=(4.0 / 5 * WIDTH - 320 / 2), y=start_button.y + start_button.height + 20
                      , width=320, height=40, text="Stop", 
-                      font=font, hover_color=(199, 111, 111), pressed_color=(245, 137, 137))
+                      font=font, hover_color=(199, 111, 111), pressed_color=(245, 137, 137),
+                      message="STOP")
 
 while running:    
     screen.fill((255, 255, 255))
@@ -374,7 +375,7 @@ while running:
                     user_input += event.unicode  # Add typed character to the input string
     
     # Render instruction text
-    instruction_text = font.render("Click on a box to set the resistance values for sorting, and GO when all ready to sort!", True, (0, 0, 0))
+    instruction_text = font.render("Click on a box to set the resistance values for sorting, and confirm when all ready to sort!", True, (0, 0, 0))
 
     # Calculate the center position
     text_x = (WIDTH - instruction_text.get_width()) // 2  # Center horizontally
