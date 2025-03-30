@@ -219,11 +219,10 @@ def draw_table():
 
     # Define center-based position
     center_x = (4 * WIDTH) // 5
-    center_y = HEIGHT // 2
 
     # Adjust table position based on center
     table_x = center_x - (table_width // 2)
-    table_y = center_y - (table_height // 2)
+    table_y = SHIFT_DOWN + 67
 
     # Render table headers
     headers = ["Box", "Resistance", "Count"]
@@ -260,49 +259,68 @@ def draw_table():
         x_offset += width
         pygame.draw.line(screen, (0, 0, 0), (x_offset, table_y), (x_offset, table_y + table_height), 1)
 
+class Button:
+    def __init__(self, x, y, width, height, text, font, hover_color, pressed_color):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.text = text
+        self.font = font
+        self.hover_color = hover_color
+        self.pressed_color = pressed_color
+        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+        self.hover = False
+        self.pressed = False
 
-def draw_go_button():
-    global go_hover 
-    global go_pressed
+    def draw(self, screen, regions):
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        # Draw the button with different colors depending on the state
+        if self.rect.collidepoint(mouse_x, mouse_y):
+            self.hover = True
+            pygame.draw.rect(screen, self.hover_color, self.rect)
+            if pygame.mouse.get_pressed()[0]:  # Left mouse button pressed
+                self.pressed = True
+                self.send_data_to_arduino(regions)  # Send data to Arduino
+        else:
+            self.hover = False
+            pygame.draw.rect(screen, (self.pressed_color), self.rect)  # Default color
 
-    button_width = 200
-    button_height = 40
-    button_x = (WIDTH / 1.5 - button_width) // 2  # Center horizontally
-    button_y = (HEIGHT - button_height) // 2 + SHIFT_DOWN  # Center vertically
+        # Draw the button border
+        pygame.draw.rect(screen, (0, 0, 0), self.rect, 2)
 
-    # Define the button rectangle
-    button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
+        # Render and display the button text
+        button_text = self.font.render(self.text if not self.pressed else "Confirmed", True, (0, 0, 0))
+        screen.blit(button_text, (self.x + (self.width - button_text.get_width()) // 2,
+                                  self.y + (self.height - button_text.get_height()) // 2))
 
-    # Draw the button (light gray background)
-    pygame.draw.rect(screen, (221, 255, 209), button_rect)
+    def send_data_to_arduino(self, regions):
+        print("Sending data to Arduino...")
 
-    # Render the "GO!" text on the button
-    button_text_string = "GO!" if not go_pressed else "Starting..."
-    button_text = font.render(button_text_string, True, (0, 0, 0))  # Black text
+        # Prepare filtered regions (removing "points" from each region)
+        filtered_regions = {
+            key: {k: v for k, v in region.items() if k != "points"}
+            for key, region in regions.items()
+        }
 
-    # Check for mouse click on the button
-    mouse_x, mouse_y = pygame.mouse.get_pos()
-    if button_rect.collidepoint(mouse_x, mouse_y):
-        go_hover = True
-        pygame.draw.rect(screen, (195, 227, 184), button_rect)
-        if pygame.mouse.get_pressed()[0]:  # Left mouse button
-            print("Sending data to Arduino...")
-            filtered_regions = {
-                key: {k: v for k, v in region.items() if k != "points"}
-                for key, region in regions.items()
-            }
-
-            json_data = json.dumps(filtered_regions)
-    else:
-        go_hover = False
-
-    pygame.draw.rect(screen, (0, 0, 0), button_rect, 2)  # Button border (black)
-    screen.blit(button_text, (button_x + (button_width - button_text.get_width()) // 2,
-                                button_y + (button_height - button_text.get_height()) // 2))
+        # Convert the filtered regions to JSON and print
+        json_data = json.dumps(filtered_regions)
+        print(json_data)
 
 # Main loop
 running = True
 active = False
+# Create an instance of the Button class
+confirm_button = Button(x=(WIDTH / 1.5 - 200) // 2, y=(HEIGHT - 40) // 2 + SHIFT_DOWN,
+                    width=200, height=40, text="Confirm", font=font, 
+                    hover_color=(141, 204, 202), pressed_color=(176, 255, 252))
+
+start_button = Button(x=(4.0 / 5 * WIDTH - 320 / 2), y=582, width=320, height=40, text="Start", 
+                      font=font, hover_color=(195, 227, 184), pressed_color=(221, 255, 209))
+
+stop_button = Button(x=(4.0 / 5 * WIDTH - 320 / 2), y=start_button.y + start_button.height + 20
+                     , width=320, height=40, text="Stop", 
+                      font=font, hover_color=(199, 111, 111), pressed_color=(245, 137, 137))
 
 while running:    
     screen.fill((255, 255, 255))
@@ -358,15 +376,27 @@ while running:
 
     # Draw the text on the screen
     screen.blit(instruction_text, (text_x, text_y))
-    
 
+    # Render controls text
+    controls_text = bigger_font.render("Control", True, (0, 0, 0))
+
+    # Calculate the center position
+    controls_text_x = WIDTH * 4.0 / 5 - (controls_text.get_width()) // 2  # Center horizontally
+    controls_text_y = start_button.y - start_button.height - controls_text.get_height() + 25
+
+    # Draw the text on the screen
+    screen.blit(controls_text, (controls_text_x, controls_text_y))
     
     draw_pie()
     draw_table()
+
+    start_button.draw(screen, regions)
+    stop_button.draw(screen, regions)
+
     if not active:
-        draw_go_button()
+        confirm_button.draw(screen, regions)
     
-    if go_hover or region_hover:
+    if confirm_button.hover or stop_button.hover or start_button.hover or region_hover:
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
     else:
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
