@@ -139,6 +139,13 @@ void setup()
 
 void loop()
 {
+  int i = 100;
+  while (true) {
+    Serial.println(i); 
+    delay(1000);
+    i += 100;
+  }
+  
   int cOut;
   float delta, deltaBest1 = MAX_ANALOG_VALUE, deltaBest2 = MAX_ANALOG_VALUE;
   float rBest1 = -1, rBest2 = -1, rR, rX; 

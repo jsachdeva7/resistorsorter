@@ -301,15 +301,44 @@ class Button:
                                   self.y + (self.height - button_text.get_height()) // 2))
 
     def handle_click(self):
-        if ser:
-            ser.write((self.message + "\n").encode())  # Send data
-            response = ser.readline().decode().strip()
-            print(response)
-        else:
-            print("Serial connection not available.")
+        print("clicked")
+        # if ser:
+        #     ser.write((self.message + "\n").encode())  # Send data
+        #     try:
+        #         response = ser.readline().decode().strip()
+        #         print(response)
+        #     except Exception as e:
+        #         print(f"Error reading from serial: {e}")
+        # else:
+        #     print("Serial connection not available.")
 
+def identify_resistor(start_button: Button):
+    response_int = -100
+    if ser and start_button.pressed:
+        response = ser.readline().decode().strip()
+        try:
+            response_int = int(response)  # Convert the string to an integer
+            print(f"Resistor Detected: {response_int}")  # Print the integer value
+        except ValueError:
+            print("Error: The received data is not a valid integer.")
+            return
+    
+        measured_res = response_int
+        for region_key, region_data in regions.items():
+            given_res = region_data["resistance"]
+            
+            if given_res is None:  # Skip if the resistance value is not set
+                continue
 
-        
+            # Calculate 10% tolerance of the given resistor value
+            err = given_res * 0.10
+
+            # Check if the measured resistor is within the 10% tolerance range of the given resistor value
+            if (given_res - err) <= measured_res <= (given_res + err):
+                print(f"Resistor bucket: {region_data["index"]}")
+                return region_data["index"]  # If a match is found, return the region's index
+            else:
+                print(f"Resistor bucket: Trash")
 
 # Main loop
 running = True
@@ -399,6 +428,8 @@ while running:
 
     start_button.draw(screen, regions)
     stop_button.draw(screen, regions)
+
+    identify_resistor(start_button)
 
     if not active:
         confirm_button.draw(screen, regions)
