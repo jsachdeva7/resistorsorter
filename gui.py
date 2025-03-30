@@ -260,7 +260,7 @@ def draw_table():
         pygame.draw.line(screen, (0, 0, 0), (x_offset, table_y), (x_offset, table_y + table_height), 1)
 
 class Button:
-    def __init__(self, x, y, width, height, text, font, hover_color, pressed_color):
+    def __init__(self, x, y, width, height, text, font, hover_color, pressed_color, clicked_text="", message="Hello"):
         self.x = x
         self.y = y
         self.width = width
@@ -272,40 +272,46 @@ class Button:
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
         self.hover = False
         self.pressed = False
+        self.message = message
+        self.time_since_click = 0
+        self.cooldown = 3
+        self.clicked_text = self.text if clicked_text == "" else clicked_text
 
     def draw(self, screen, regions):
         mouse_x, mouse_y = pygame.mouse.get_pos()
         # Draw the button with different colors depending on the state
+        pygame.draw.rect(screen, self.pressed_color, self.rect)
         if self.rect.collidepoint(mouse_x, mouse_y):
             self.hover = True
             pygame.draw.rect(screen, self.hover_color, self.rect)
-            if pygame.mouse.get_pressed()[0]:  # Left mouse button pressed
-                self.pressed = True
-                self.send_data_to_arduino(regions)  # Send data to Arduino
-        else:
-            self.hover = False
-            pygame.draw.rect(screen, (self.pressed_color), self.rect)  # Default color
 
+            if pygame.mouse.get_pressed()[0]:  # Left mouse button pressed
+                current_time = time.time()
+                if current_time - self.time_since_click > self.cooldown:  # Enforce cooldown
+                    self.pressed = True
+                    self.handle_click()
+                    self.time_since_click = current_time  # Update last click time 
+                
         # Draw the button border
         pygame.draw.rect(screen, (0, 0, 0), self.rect, 2)
 
         # Render and display the button text
-        button_text = self.font.render(self.text if not self.pressed else "Confirmed", True, (0, 0, 0))
+        button_text = self.font.render(self.text if not self.pressed else self.clicked_text, True, (0, 0, 0))
         screen.blit(button_text, (self.x + (self.width - button_text.get_width()) // 2,
                                   self.y + (self.height - button_text.get_height()) // 2))
 
-    def send_data_to_arduino(self, regions):
+    def handle_click(self):
         print("Sending data to Arduino...")
+        print(f"Sending message: {self.message}")
 
-        # Prepare filtered regions (removing "points" from each region)
-        filtered_regions = {
-            key: {k: v for k, v in region.items() if k != "points"}
-            for key, region in regions.items()
-        }
+        if ser:
+            ser.write((self.message + "\n").encode())  # Send data
+            print("Message sent!")
+        else:
+            print("Serial connection not available.")
 
-        # Convert the filtered regions to JSON and print
-        json_data = json.dumps(filtered_regions)
-        print(json_data)
+
+        
 
 # Main loop
 running = True
@@ -313,7 +319,7 @@ active = False
 # Create an instance of the Button class
 confirm_button = Button(x=(WIDTH / 1.5 - 200) // 2, y=(HEIGHT - 40) // 2 + SHIFT_DOWN,
                     width=200, height=40, text="Confirm", font=font, 
-                    hover_color=(141, 204, 202), pressed_color=(176, 255, 252))
+                    hover_color=(141, 204, 202), pressed_color=(176, 255, 252), clicked_text="Confirmed")
 
 start_button = Button(x=(4.0 / 5 * WIDTH - 320 / 2), y=582, width=320, height=40, text="Start", 
                       font=font, hover_color=(195, 227, 184), pressed_color=(221, 255, 209))
