@@ -23,6 +23,9 @@ region_hover = False
 go_hover = False
 go_pressed = False
 
+# flag
+one_seen = False
+
 # regions for resistors
 regions = {}
 editing_region = None
@@ -51,7 +54,7 @@ for i in range(NUM_SIDES):
     }
 
 # Setup serial communication
-SERIAL_PORT = "COM9"  
+SERIAL_PORT = "COM8"  
 BAUD_RATE = 9600  
 
 ser = serial.Serial(SERIAL_PORT, BAUD_RATE)
@@ -309,22 +312,25 @@ class Button:
 
     def handle_click(self):
         print("clicked")
-        # if ser:
-        #     ser.write((self.message + "\n").encode())  # Send data
-        #     try:
-        #         response = ser.readline().decode().strip()
-        #         print(response)
-        #     except Exception as e:
-        #         print(f"Error reading from serial: {e}")
-        # else:
-        #     print("Serial connection not available.")
+        if ser:
+            ser.write((self.message + "\n").encode())  # Send data
+            try:
+                response = ser.readline().decode().strip()
+                print(response)
+            except Exception as e:
+                print(f"Error reading from serial: {e}")
+        else:
+            print("Serial connection not available.")
 
 def identify_resistor(start_button: Button):
+    # ser.write("S")
     response_int = -100
-    if ser and start_button.pressed:
+    global one_seen
+    if ser and start_button.pressed and not one_seen:
         response = ser.readline().decode().strip()
+        print(response)
         try:
-            response_int = int(response)  # Convert the string to an integer
+            response_int = float(response)  # Convert the string to an integer
             print(f"Resistor Detected: {response_int}")  # Print the integer value
         except ValueError:
             print("Error: The received data is not a valid integer.")
@@ -346,13 +352,19 @@ def identify_resistor(start_button: Button):
 
                 # Increment the resistor_count for the matched region
                 region_data["resistor_count"] += 1
+                print("Trying to send ", region_data["index"] - 1)
+                ser.write((str(region_data["index"] - 1) + "\n").encode())  # Send data
+                ser.write("S\n".encode())
+                one_seen = True
                 return region_data["index"]  # If a match is found, return the region's index
         
         print(f"Resistor bucket: Trash")
         for region_key, region_data in regions.items():
             if region_data["resistance"] == -1:  # Check if resistance is -1 for trash bucket
                 region_data["resistor_count"] += 1  # Increment the trash region count
+                ser.write((str(region_data["index"] - 1) + "\n").encode())  # Send data
                 break  # Exit after incrementing the first trash bucket count
+        
 
 # Main loop
 running = True
@@ -365,7 +377,7 @@ active = False
 
 start_button = Button(x=(4.0 / 5 * WIDTH - 320 / 2), y=560, width=320, height=40, text="Start", 
                       font=font, hover_color=(195, 227, 184), pressed_color=(221, 255, 209),
-                      message="START")
+                      message="S")
 
 stop_button = Button(x=(4.0 / 5 * WIDTH - 320 / 2), y=start_button.y + start_button.height + 20
                      , width=320, height=40, text="Stop", 
